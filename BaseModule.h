@@ -6,10 +6,9 @@
 #include <queue>
 #include <functional>
 #include "MessageQueue.h"
+#include "TimeManager.h"
 
-class Simulator;
-
-std::vector<int> VertexProperty = {0,10,20,30};
+std::vector<int> VertexProperty = {0,25,35,45};
 std::vector<int> offset = {0,3,4,6};
 std::vector<int> edgeweight = {20,30,40,10,10,10,10};
 std::vector<int> edge = {1,2,3,3,1,3,2};
@@ -18,8 +17,14 @@ class BaseModule {
 protected:
     GraphData inputData;
     GraphData outputData;
+    TimeManager* timeManager = nullptr;
 
 public:
+
+    void setTimeManager(TimeManager* manager) {
+        timeManager = manager;
+    }
+
     BaseModule() = default;
 
     virtual ~BaseModule() {}

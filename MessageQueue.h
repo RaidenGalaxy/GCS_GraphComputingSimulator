@@ -36,11 +36,14 @@ public:
 
 private:
     std::priority_queue<Message> queue;
+    std::function<int()> getGlobalClock;
 
 public:
 
-    void addMessage(int timestamp, void* targetModule, const GraphData& data) {
-        queue.push({timestamp, targetModule, data});
+    MessageQueue(std::function<int()> clockGetter) : getGlobalClock(clockGetter) {}
+
+    void addMessage(int globalClock, void* targetModule, const GraphData& data) {
+        queue.push({getGlobalClock(), targetModule, data});
     }
 
     Message popMessage() {

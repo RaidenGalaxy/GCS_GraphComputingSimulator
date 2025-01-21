@@ -41,14 +41,8 @@ public:
     }*/
 
    void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
-    auto* target = static_cast<BaseModule*>(targetModule);
-    if (target) {
-        target->receiveData(outputData);
-        queue.addMessage(timestamp, targetModule, outputData);
-    } else {
-        std::cerr << "Error: Null target module in sendMessage." << std::endl;
+        queue.addMessage(timestamp + 1, targetModule, outputData);
     }
-}
 
 };
 
