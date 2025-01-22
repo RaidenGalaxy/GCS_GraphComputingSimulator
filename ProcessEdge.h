@@ -50,7 +50,7 @@ public:
     
 
     void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
-        queue.addMessage(timestamp, targetModule, outputData);
+        BaseModule::sendMessage(queue, timestamp, targetModule);
     }
 };
 

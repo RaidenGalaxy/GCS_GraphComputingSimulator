@@ -20,6 +20,21 @@ struct GraphData {
     GraphData()
         : srcid(0), Uprop(0), edgenum(0),
           dstid(), weight(), Vprop(), Vtprop(), res() {} //default construction
+
+    bool operator==(const GraphData& other) const {
+        return srcid == other.srcid &&
+               Uprop == other.Uprop &&
+               edgenum == other.edgenum &&
+               dstid == other.dstid &&
+               weight == other.weight &&
+               Vprop == other.Vprop &&
+               Vtprop == other.Vtprop &&
+               res == other.res;
+    }
+
+    bool operator!=(const GraphData& other) const {
+        return !(*this == other);
+    }
 };
 
 class MessageQueue {

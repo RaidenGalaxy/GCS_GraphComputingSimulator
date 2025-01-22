@@ -25,6 +25,11 @@ public:
                     res[i] = inputData.Vprop[i];
                 }
                 else res[i] = inputData.Vtprop[i];
+
+                if (timeManager) {
+                    timeManager->incrementGlobalClock();
+                }
+                
             }
             else {
                 std::cerr << "Index out of bounds: " << i << std::endl;
@@ -44,7 +49,7 @@ public:
     }
 
     void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
-        queue.addMessage(timestamp, targetModule, outputData);
+        BaseModule::sendMessage(queue, timestamp, targetModule);
     }
 };
 

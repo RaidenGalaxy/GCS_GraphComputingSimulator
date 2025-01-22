@@ -57,6 +57,10 @@ public:
             BaseModule* targetModule = static_cast<BaseModule*>(msg.targetModule);
             GraphData inputData = msg.data;
 
+            std::cout << "Processing message at globalClock: " << globalClock 
+                  << ", targetModule: " << typeid(*targetModule).name() 
+                  << ", srcid: " << inputData.srcid << std::endl;
+
             targetModule->process(inputData);
 
             targetModule->sendMessage(messageQueue, globalClock++, targetModule);

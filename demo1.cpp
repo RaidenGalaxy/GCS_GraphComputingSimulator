@@ -8,6 +8,7 @@
 #include "ProcessEdge.h"
 #include "Reduce.h"
 #include "WriteDSTProp.h"
+#include "TimeManager.h"
 #include <memory>
 
 int main() {
@@ -40,27 +41,27 @@ int main() {
 
     readActiveVertexModule->process(initialData);
 
-    readActiveVertexModule->sendMessage(simulator.messageQueue, 0, readEdgeIDModule.get());
+    readActiveVertexModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readEdgeIDModule.get());
 
     readEdgeIDModule->process(readActiveVertexModule->getOutputData());
 
-    readEdgeIDModule->sendMessage(simulator.messageQueue, 0, readEdgeModule.get());
+    readEdgeIDModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readEdgeModule.get());
 
     readEdgeModule->process(readEdgeIDModule->getOutputData());
 
-    readEdgeModule->sendMessage(simulator.messageQueue, 0, readDSTModule.get());
+    readEdgeModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readDSTModule.get());
 
     readDSTModule->process(readEdgeModule->getOutputData());
 
-    readDSTModule->sendMessage(simulator.messageQueue, 0, processEdge.get());
+    readDSTModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), processEdge.get());
 
     processEdge->process(readDSTModule->getOutputData());
 
-    processEdge->sendMessage(simulator.messageQueue, 0, reduce.get());
+    processEdge->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), reduce.get());
 
     reduce->process(processEdge->getOutputData());
 
-    reduce->sendMessage(simulator.messageQueue, 0, writeDST.get());
+    reduce->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), writeDST.get());
 
     writeDST->process(reduce->getOutputData());
 

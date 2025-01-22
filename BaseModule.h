@@ -17,6 +17,7 @@ class BaseModule {
 protected:
     GraphData inputData;
     GraphData outputData;
+    GraphData lastSentData;
     TimeManager* timeManager = nullptr;
 
 public:
@@ -35,7 +36,14 @@ public:
 
     virtual void process(const GraphData& inputData) = 0;
 
-    virtual void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) = 0;
+    //virtual void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) = 0;
+
+    virtual void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) {
+        if (outputData != lastSentData) {
+            queue.addMessage(timestamp, targetModule, outputData);
+            lastSentData = outputData;
+        }
+    }
 
     GraphData getOutputData() const {
         return outputData;
