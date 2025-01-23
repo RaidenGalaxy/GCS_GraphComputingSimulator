@@ -33,9 +33,7 @@ public:
                 outputData.weight[i] = inputData.weight[i];
                 outputData.Vprop[i] = inputData.Vprop[i];
 
-                if (timeManager) {
-                    timeManager->incrementGlobalClock();
-                }
+                advanceClock();
 
             } else {
                 std::cerr << "PE Index out of bounds: " << i << std::endl;

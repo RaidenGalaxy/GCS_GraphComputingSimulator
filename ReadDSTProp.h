@@ -80,7 +80,10 @@ public:
     outputData.Uprop = Uprop;
     outputData.edgenum = edgenum;
 
-}
+    advanceClock();
+    
+
+    }
 
     void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
         BaseModule::sendMessage(queue, timestamp, targetModule);

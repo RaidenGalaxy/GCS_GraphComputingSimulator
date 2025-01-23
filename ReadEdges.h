@@ -33,6 +33,8 @@ public:
         outputData.Uprop = Uprop;
         outputData.edgenum = edgenum;
 
+        advanceClock();
+        
         
     }
 
@@ -40,7 +42,7 @@ public:
         queue.addMessage(timestamp, targetModule, outputData);
     }*/
 
-   void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
+    void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
         BaseModule::sendMessage(queue, timestamp, targetModule);
     }
 

@@ -74,6 +74,9 @@ public:
         outputData.Uprop = Uprop;
         outputData.srcid = srcid;
 
+        advanceClock();
+        
+
     }
 
     void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {

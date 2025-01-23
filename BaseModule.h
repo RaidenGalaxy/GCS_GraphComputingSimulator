@@ -8,7 +8,7 @@
 #include "MessageQueue.h"
 #include "TimeManager.h"
 
-std::vector<int> VertexProperty = {0,25,35,45};
+std::vector<int> VertexProperty = {1,25,35,45};
 std::vector<int> offset = {0,3,4,6};
 std::vector<int> edgeweight = {20,30,40,10,10,10,10};
 std::vector<int> edge = {1,2,3,3,1,3,2};
@@ -18,6 +18,9 @@ protected:
     GraphData inputData;
     GraphData outputData;
     GraphData lastSentData;
+
+    int localClock = 0;
+
     TimeManager* timeManager = nullptr;
 
 public:
@@ -43,6 +46,14 @@ public:
             queue.addMessage(timestamp, targetModule, outputData);
             lastSentData = outputData;
         }
+    }
+
+    void advanceClock() {
+        localClock++;
+    }
+
+    int getLocalClock() const {
+        return localClock;
     }
 
     GraphData getOutputData() const {

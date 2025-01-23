@@ -14,6 +14,9 @@ public:
         int Uprop = VertexProperty[srcid];
         outputData.srcid = srcid;
         outputData.Uprop = Uprop;
+
+        advanceClock();
+
         
 
     }

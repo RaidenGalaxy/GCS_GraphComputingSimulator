@@ -41,27 +41,27 @@ int main() {
 
     readActiveVertexModule->process(initialData);
 
-    readActiveVertexModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readEdgeIDModule.get());
+    readActiveVertexModule->sendMessage(simulator.messageQueue, simulator.globalClock, readEdgeIDModule.get());
 
     readEdgeIDModule->process(readActiveVertexModule->getOutputData());
 
-    readEdgeIDModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readEdgeModule.get());
+    readEdgeIDModule->sendMessage(simulator.messageQueue, simulator.globalClock, readEdgeModule.get());
 
     readEdgeModule->process(readEdgeIDModule->getOutputData());
 
-    readEdgeModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), readDSTModule.get());
+    readEdgeModule->sendMessage(simulator.messageQueue, simulator.globalClock, readDSTModule.get());
 
     readDSTModule->process(readEdgeModule->getOutputData());
 
-    readDSTModule->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), processEdge.get());
+    readDSTModule->sendMessage(simulator.messageQueue, simulator.globalClock, processEdge.get());
 
     processEdge->process(readDSTModule->getOutputData());
 
-    processEdge->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), reduce.get());
+    processEdge->sendMessage(simulator.messageQueue, simulator.globalClock, reduce.get());
 
     reduce->process(processEdge->getOutputData());
 
-    reduce->sendMessage(simulator.messageQueue, simulator.getGlobalClock(), writeDST.get());
+    reduce->sendMessage(simulator.messageQueue, simulator.globalClock, writeDST.get());
 
     writeDST->process(reduce->getOutputData());
 

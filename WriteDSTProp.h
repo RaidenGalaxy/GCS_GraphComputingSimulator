@@ -37,6 +37,8 @@ public:
         outputData.srcid = inputData.srcid;
         outputData.Uprop = inputData.Uprop;
         outputData.edgenum = inputData.edgenum;
+
+        advanceClock();
     }
 
     void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {

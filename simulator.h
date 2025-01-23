@@ -2,7 +2,6 @@
 #define SIMULATOR_H
 
 #include "BaseModule.h"
-#include "TimeManager.h"
 #include <iostream>
 #include <vector>
 #include <queue>
@@ -17,32 +16,22 @@
 #include "WriteDSTProp.h"
 #include "MessageQueue.h"
 
-class Simulator : public TimeManager {
+class Simulator {
+
 public:
 
     std::vector<std::shared_ptr<BaseModule>> modules;
     MessageQueue messageQueue;
 
     int globalClock = 0;
+    int localClock = 0;
     int maxIterations = 1000;
 
-    //Simulator() = default;
+    Simulator() = default;
 
     void addModule(std::shared_ptr<BaseModule> module) {
-        module->setTimeManager(this);
         modules.push_back(module);
     }
-
-    void incrementGlobalClock() override {
-        globalClock++;
-    }
-
-    int getGlobalClock() const override {
-        return globalClock;
-    }
-
-    Simulator() 
-        : messageQueue([this]() { return this->globalClock; }) {}
 
     void run() {
         int iterationCount = 0;
@@ -58,14 +47,22 @@ public:
             GraphData inputData = msg.data;
 
             std::cout << "Processing message at globalClock: " << globalClock 
-                  << ", targetModule: " << typeid(*targetModule).name() 
-                  << ", srcid: " << inputData.srcid << std::endl;
+                  << ", targetModule: " << typeid(*targetModule).name() << std::endl;
 
             targetModule->process(inputData);
 
             targetModule->sendMessage(messageQueue, globalClock++, targetModule);
 
-            incrementGlobalClock();
+            targetModule->advanceClock();
+
+            int maxLocalClock = 0;
+
+            for (const auto& module : modules) {
+                maxLocalClock = std::max(maxLocalClock, module->getLocalClock());
+            }
+
+            globalClock = maxLocalClock;
+
         }
     }
 
@@ -73,7 +70,8 @@ public:
     for (auto& module : modules) {
         GraphData outputData = module->getOutputData();
 
-        std::cout << "Module output -> srcid: " << outputData.srcid
+        std::cout << "Process at localClock: " << module->getLocalClock()
+                  << ", Module output -> srcid: " << outputData.srcid
                   << ", Uprop: " << outputData.Uprop
                   << ", edgenum: " << outputData.edgenum
                   << ", dstid: ";

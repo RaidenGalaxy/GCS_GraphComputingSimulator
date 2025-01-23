@@ -26,10 +26,8 @@ public:
                 }
                 else res[i] = inputData.Vtprop[i];
 
-                if (timeManager) {
-                    timeManager->incrementGlobalClock();
-                }
-                
+                advanceClock();
+
             }
             else {
                 std::cerr << "Index out of bounds: " << i << std::endl;
