@@ -2,16 +2,46 @@
 #define BASEMODULE_H
 
 #include <iostream>
+#include <fstream>
+#include <string>
 #include <vector>
 #include <queue>
 #include <functional>
 #include "MessageQueue.h"
 #include "TimeManager.h"
+#include "PerformanceTimer.h"
 
-std::vector<int> VertexProperty = {1,25,35,45};
-std::vector<int> offset = {0,3,4,6};
-std::vector<int> edgeweight = {20,30,40,10,10,10,10};
-std::vector<int> edge = {1,2,3,3,1,3,2};
+#define MIN 0
+#define MAX 99999
+
+
+extern std::vector<int> offset;
+extern std::vector<int> edge;
+extern std::vector<double> edgeweight;
+extern std::vector<int> VertexProperty;
+extern std::unordered_set<int> activeVertices;
+//SSSP
+/*std::vector<int> VertexProperty = {0, MAX, MAX, MAX, MAX, MAX, MAX};
+std::vector<int> offset = {0, 2, 4, 6, 8, 9, 10, 11};
+std::vector<int> edgeweight = {5, 10, 5, 20, 15, 25, 10, 30, 10, 5, 10};
+std::vector<int> edge = {1, 2, 2, 3, 3, 4, 4, 5, 6, 6, 6};
+std::unordered_set<int> activeVertices = {0};*/
+
+//SSWP
+/*std::vector<int> VertexProperty = {MAX, MIN, MIN, MIN, MIN};
+std::vector<int> offset = {0, 2, 3, 5, 6, 6};
+std::vector<int> edge = {1, 2, 3, 3, 4, 2};
+std::vector<int> edgeweight = {5, 10, 15, 5, 10, 20}; 
+std::unordered_set<int> activeVertices = {0};*/
+
+//PR
+/*std::vector<double> VertexProperty = {0.2, 0.2, 0.2, 0.2, 0.2};
+std::vector<int> offset = {0, 2, 3, 5, 6, 6};
+std::vector<int> edge = {1, 2, 3, 3, 4, 2};
+std::vector<int> edgeweight = {1, 1, 1, 1, 1, 1};*/
+
+
+
 
 class BaseModule {
 protected:
@@ -22,6 +52,16 @@ protected:
     int localClock = 0;
 
     TimeManager* timeManager = nullptr;
+
+    virtual void preProcess() {
+        PerformanceTimer::Start(this->name());
+    }
+    
+    virtual void postProcess() {
+        auto duration = PerformanceTimer::Stop(this->name());
+    }
+    
+    virtual const char* name() const = 0;
 
 public:
 

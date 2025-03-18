@@ -8,11 +8,33 @@
 #include "ProcessEdge.h"
 #include "Reduce.h"
 #include "WriteDSTProp.h"
-#include "TimeManager.h"
-#include <memory>
+#include "PerformanceTimer.h"
+//#include "mem.h"
+//#include "def.h"
+//#include <memory>
+
+//using namespace ramulator;
 
 int main() {
-    Simulator simulator;
+
+
+    std::string offset_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/ofs/ofs_1";
+    std::string edge_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/edges/edges_1";
+    std::string edgeweight_file = "/home/egalaxy/Desktop/simulator/test_src/graph_generate/weight/weight_1";
+
+    Simulator simulator(offset_file, edge_file, edgeweight_file, "SSSP");
+
+    /*uint64_t swap_start;
+    MEM::runtime_config run_cfg;
+
+    /simulator.initMemory(swap_start,run_cfg);
+
+    if (!simulator.memory) {
+        std::cerr << "Error: Memory initialization failed!" << std::endl;
+        return 1;
+    }
+        */
+
 
     auto readActiveVertexModule = std::make_shared<ReadActiveVertexPropertyModule>();
     auto readEdgeIDModule = std::make_shared<ReadEdgeIDModule>();
@@ -27,9 +49,13 @@ int main() {
     initialData.Uprop = 0;
     initialData.edgenum = 0;
     initialData.dstid = {0, 0, 0};
-    initialData.weight = {0, 0, 0, 0, 0, 0, 0};
+    initialData.weight = {0, 0, 0, 0, 0, 0};
     initialData.Vprop = {0, 0, 0, 0};
     initialData.Vtprop = {0, 0, 0, 0};
+    initialData.total_processed_edges = 0;
+
+    initialData.activeVertices.insert(initialData.srcid);
+    simulator.activeVertices.insert(initialData.srcid);
 
     simulator.addModule(readActiveVertexModule);
     simulator.addModule(readEdgeIDModule);
@@ -39,35 +65,9 @@ int main() {
     simulator.addModule(reduce);
     simulator.addModule(writeDST);
 
-    readActiveVertexModule->process(initialData);
-
-    readActiveVertexModule->sendMessage(simulator.messageQueue, simulator.globalClock, readEdgeIDModule.get());
-
-    readEdgeIDModule->process(readActiveVertexModule->getOutputData());
-
-    readEdgeIDModule->sendMessage(simulator.messageQueue, simulator.globalClock, readEdgeModule.get());
-
-    readEdgeModule->process(readEdgeIDModule->getOutputData());
-
-    readEdgeModule->sendMessage(simulator.messageQueue, simulator.globalClock, readDSTModule.get());
-
-    readDSTModule->process(readEdgeModule->getOutputData());
-
-    readDSTModule->sendMessage(simulator.messageQueue, simulator.globalClock, processEdge.get());
-
-    processEdge->process(readDSTModule->getOutputData());
-
-    processEdge->sendMessage(simulator.messageQueue, simulator.globalClock, reduce.get());
-
-    reduce->process(processEdge->getOutputData());
-
-    reduce->sendMessage(simulator.messageQueue, simulator.globalClock, writeDST.get());
-
-    writeDST->process(reduce->getOutputData());
-
-
+    
     simulator.run();
-    simulator.printResults();
-
+    //simulator.printResults();
+    
     return 0;
 }

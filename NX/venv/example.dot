@@ -1,0 +1,32 @@
+digraph DAG {
+    node [shape=circle, color=lightblue];
+
+    A;
+    B;
+    C;
+    D;
+    E;
+    F;
+    G;
+    H;
+    I;
+    J;
+    K;
+    L;
+
+    A -> B;
+    A -> C;
+    B -> D;
+    C -> D;
+    B -> E;
+    D -> F;
+    E -> F;
+    F -> G;
+    E -> H;
+    F -> I;
+    G -> J;
+    H -> J;
+    I -> K;
+    J -> K;
+    K -> L;
+}

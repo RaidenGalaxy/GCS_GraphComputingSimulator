@@ -43,9 +43,12 @@ public:
 //input: src id, Uprop  output: src id, Uprop, dst id, edgenum
 class ReadEdgeIDModule : public BaseModule { // get edge's id
 public:
+
+    const char* name() const override { return "ReadEdgeID"; }
+
     void process(const GraphData& inputData) override {
         int srcid = inputData.srcid;
-        int Uprop = inputData.Uprop;
+        double Uprop = inputData.Uprop;
 
         if (srcid < 0 || srcid >= offset.size()) {
             std::cerr << "Invalid srcid: " << srcid << std::endl;
@@ -55,6 +58,8 @@ public:
         int start = offset[srcid];
         int end = offset[srcid + 1];
         int edgenum = end - start;
+        
+        std::cout << "ReadEdge: srcid = " << srcid << ", edgenum = " << edgenum << std::endl;
 
         std::vector<int> dstid(edgenum);
         outputData.dstid.resize(edgenum);
@@ -70,9 +75,16 @@ public:
             }
         }
 
+        for (int dst : outputData.dstid) {
+            outputData.activeVertices.insert(dst);
+        }
+
         outputData.edgenum = edgenum;
         outputData.Uprop = Uprop;
         outputData.srcid = srcid;
+        outputData.activeVertices = inputData.activeVertices;
+
+        outputData.total_processed_edges = inputData.total_processed_edges;
 
         advanceClock();
         

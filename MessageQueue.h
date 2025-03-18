@@ -5,21 +5,32 @@
 #include <vector>
 #include <queue>
 #include <functional>
+#include <unordered_set>
+#include <unordered_map>
 
 struct GraphData {
-    int srcid;        //source id
-    int Uprop;        //source property
-    int edgenum;      //edge number of source
+    int srcid;
+    //SSSP&SSWP
+    //int Uprop; 
+    double Uprop;
+    int edgenum;
 
-    std::vector<int> dstid;       // destination id
-    std::vector<int> weight;      // edge weight
-    std::vector<int> Vprop;       // destination property
-    std::vector<int> Vtprop;      // destination temporary property
-    std::vector<int> res;         // min(vprop, vtprop)
+    std::vector<int> dstid;
+    std::vector<int> weight;
+    std::vector<int> Vprop;
+    std::vector<int> Vtprop;
+    std::vector<int> res;
+
+    std::vector<double> contributions;
+    std::unordered_map<int, double> aggregated_contributions;
+
+    std::unordered_set<int> activeVertices;
+
+    size_t total_processed_edges = 0;
 
     GraphData()
         : srcid(0), Uprop(0), edgenum(0),
-          dstid(), weight(), Vprop(), Vtprop(), res() {} //default construction
+          dstid(), weight(), Vprop(), Vtprop(), res(), contributions(), aggregated_contributions(), activeVertices(), total_processed_edges(0){}
 
     bool operator==(const GraphData& other) const {
         return srcid == other.srcid &&

@@ -3,52 +3,81 @@
 
 #include "BaseModule.h"
 #include "MessageQueue.h"
+#include <limits>
+#include <unordered_set>
 
 
 //input:Vprop[n], Vtprop[n], edgenum, dstid[n]; output:res[n], edgenum, dstid[n]
-class ReduceModule : public BaseModule {  //min(Vprop,Vtprop)
-public:
-    void process(const GraphData& inputData) override {
+class ReduceModule : public BaseModule {
+    public:
 
-        int edgenum = inputData.edgenum;
-        int res[edgenum];
+    const char* name() const override { return "Reduce"; }
 
-        outputData.dstid.resize(edgenum);
-        outputData.weight.resize(edgenum);
-        outputData.Vprop.resize(edgenum);
-        outputData.Vtprop.resize(edgenum);
-        outputData.res.resize(edgenum);
-        //min();
-        for(int i = 0; i < edgenum; i++){
-            if(i >= 0 && i < edgeweight.size()){
-                if(inputData.Vprop[i] < inputData.Vtprop[i]){
-                    res[i] = inputData.Vprop[i];
+        void process(const GraphData& inputData) override {
+            int edgenum = inputData.edgenum;
+            std::vector<int> res(edgenum, std::numeric_limits<int>::max());
+    
+            outputData.dstid.resize(edgenum);
+            outputData.weight.resize(edgenum);
+            outputData.Vprop.resize(edgenum);
+            outputData.Vtprop.resize(edgenum);
+            outputData.res.resize(edgenum);
+    
+            for (int i = 0; i < edgenum; i++) {
+                if (i < 0 || i >= inputData.dstid.size()) {
+                    std::cerr << "ReduceModule: Index out of bounds: " << i << std::endl;
+                    return;
                 }
-                else res[i] = inputData.Vtprop[i];
+    
+                res[i] = std::min(inputData.Vprop[i], inputData.Vtprop[i]);//SSSP
 
-                advanceClock();
+                //res[i] = std::max(inputData.Vprop[i], inputData.Vtprop[i]);//SSWP
+    
+                outputData.dstid[i] = inputData.dstid[i];
+                outputData.weight[i] = inputData.weight[i];
+                outputData.Vprop[i] = inputData.Vprop[i];
+                outputData.Vtprop[i] = inputData.Vtprop[i];
+                outputData.res[i] = res[i];
 
+                std::cout << "Reduce Debug: Vprop[" << i << "] = " << inputData.Vprop[i]
+                << ", Vtprop[" << i << "] = " << inputData.Vtprop[i] << std::endl;
+
+    
+                if (res[i] < inputData.Vtprop[i]) {
+                    outputData.activeVertices.insert(outputData.dstid[i]);
+                }
             }
-            else {
-                std::cerr << "Index out of bounds: " << i << std::endl;
-                return;
-            }
+    
+            outputData.srcid = inputData.srcid;
+            outputData.Uprop = inputData.Uprop;
+            outputData.edgenum = inputData.edgenum;
 
-            outputData.dstid[i] = inputData.dstid[i];
-            outputData.weight[i] = inputData.weight[i];
-            outputData.Vprop[i] = inputData.Vprop[i];
-            outputData.Vtprop[i] = inputData.Vtprop[i];
-            outputData.res[i] = res[i];
-
+            outputData.total_processed_edges = inputData.total_processed_edges;
+    
+            advanceClock();
+    
+            std::cout << "Reduce: res = ";
+            for (int v : outputData.res) std::cout << v << " ";
+            std::cout << std::endl;
         }
-        outputData.srcid = inputData.srcid;
-        outputData.Uprop = inputData.Uprop;
-        outputData.edgenum = inputData.edgenum;
-    }
 
-    void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
-        BaseModule::sendMessage(queue, timestamp, targetModule);
-    }
-};
+        /*void process(const GraphData& inputData) override {
+            std::unordered_map<int, double> contributions_map;
+            
+            for (int i = 0; i < inputData.edgenum; i++) {
+                int dst = inputData.dstid[i];
+                contributions_map[dst] += inputData.contributions[i];
+                
+                std::cout << "[Reduce] Add contribution " << inputData.contributions[i]
+                          << " to dst=" << dst << std::endl;
+            }
+            
+            outputData.aggregated_contributions = contributions_map;
+        }*/
+    
+        void sendMessage(MessageQueue& queue, int timestamp, void* targetModule) override {
+            BaseModule::sendMessage(queue, timestamp, targetModule);
+        }
+    };
 
 #endif

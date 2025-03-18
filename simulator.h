@@ -7,6 +7,7 @@
 #include <queue>
 #include <functional>
 #include <memory>
+#include <numeric>
 #include "ReadActiveVertex.h"
 #include "ReadEdgeID.h"
 #include "ReadEdges.h"
@@ -16,55 +17,266 @@
 #include "WriteDSTProp.h"
 #include "MessageQueue.h"
 
+#include "GraphLoader.h"
+#include "Globaldata.h"
+
+#include "PerformanceTimer.h"
+//#include "mem.h"
+//#include "Config.h"
+//#include "def.h"
+
+//using namespace ramulator;
+
 class Simulator {
 
 public:
 
     std::vector<std::shared_ptr<BaseModule>> modules;
     MessageQueue messageQueue;
+    std::unordered_set<int> activeVertices;
+    //std::shared_ptr<MEM::single_mem> memory;
+
+    std::shared_ptr<ReadActiveVertexPropertyModule> readActiveVertex;
+    std::shared_ptr<ReadEdgeIDModule> readEdgeID;
+    std::shared_ptr<ReadEdgeModule> readEdge;
+    std::shared_ptr<ReadDSTPropertyModule> readDST;
+    std::shared_ptr<ProcessEdgeModule> processEdge;
+    std::shared_ptr<ReduceModule> reduce;
+    std::shared_ptr<WriteDSTPropertyModule> writeDST;
 
     int globalClock = 0;
     int localClock = 0;
-    int maxIterations = 1000;
+    int maxIterations = 10000;
 
-    Simulator() = default;
+
+
+    Simulator(const std::string& offset_path,
+                const std::string& edge_path,
+                const std::string& weight_path,
+                const std::string& algo_type) {
+    try {
+        GraphLoader::LoadOffset(offset_path, offset);
+        GraphLoader::LoadEdge(edge_path, edge);
+        GraphLoader::LoadWeight(weight_path, edgeweight);
+        
+        //init vprop
+        int num_vertices = offset.size() - 1;
+        if (algo_type == "PR") {
+            GraphLoader::InitVertexProperty(VertexProperty, num_vertices, algo_type);
+        } else {
+            std::vector<int> vprop;
+            GraphLoader::InitVertexProperty(vprop, num_vertices, algo_type);
+            //trans to double
+            VertexProperty.assign(vprop.begin(), vprop.end());
+        }
+        
+        //init active vertices
+        if (algo_type == "SSSP" || algo_type == "SSWP") {
+            activeVertices.insert(0); //default
+        } else {
+            for (int i = 0; i < num_vertices; ++i) {
+                activeVertices.insert(i);
+            }
+        }
+        
+
+        readActiveVertex = std::make_shared<ReadActiveVertexPropertyModule>();
+        readEdgeID = std::make_shared<ReadEdgeIDModule>();
+        readEdge = std::make_shared<ReadEdgeModule>();
+        readDST = std::make_shared<ReadDSTPropertyModule>();
+        processEdge = std::make_shared<ProcessEdgeModule>();
+        reduce = std::make_shared<ReduceModule>();
+        writeDST = std::make_shared<WriteDSTPropertyModule>();
+
+        std::cout << "All modules initialized successfully!\n";
+    } catch (const std::exception& e) {
+        std::cerr << "Exception while initializing modules: " << e.what() << std::endl;
+        exit(EXIT_FAILURE);
+    } catch (...) {
+        std::cerr << "Unknown error while initializing modules!" << std::endl;
+        exit(EXIT_FAILURE);
+        }
+    }
+
 
     void addModule(std::shared_ptr<BaseModule> module) {
         modules.push_back(module);
     }
 
+    //SSSP & SSWP
     void run() {
+
+        PerformanceStats stats;
+        size_t total_edges = 0;
+
         int iterationCount = 0;
+        std::unordered_set<int> activeVertices = {0};
+        size_t total_processed_edges = 0;
 
-        while (!messageQueue.isEmpty()) {
-            if (iterationCount++ > maxIterations) {
-                std::cerr << "Maximum iterations reached. Terminating to prevent infinite loop." << std::endl;
-                break;
+        auto start_time = PerformanceTimer::Clock::now();
+    
+        while (iterationCount < maxIterations && !activeVertices.empty()) {
+
+            auto iter_start = PerformanceTimer::Clock::now();
+
+            std::cout << "Iteration " << iterationCount 
+                      << " started. Active vertices: " << activeVertices.size() << std::endl;
+    
+            std::unordered_set<int> newActiveVertices;
+            std::vector<int> oldVertexProperty = VertexProperty;
+    
+            for (int src : activeVertices) {
+                GraphData currentData;
+                currentData.srcid = src;
+                currentData.activeVertices.insert(src);
+    
+                PerformanceTimer::Start("ReadActiveVertex");
+                readActiveVertex->process(currentData);
+                stats.module_times["ReadActiveVertex"] += PerformanceTimer::Stop("ReadActiveVertex");
+
+                PerformanceTimer::Start("ReadEdgeID");
+                readEdgeID->process(readActiveVertex->getOutputData());
+                stats.module_times["ReadEdgeID"] += PerformanceTimer::Stop("ReadEdgeID");
+
+                PerformanceTimer::Start("ReadEdge");
+                readEdge->process(readEdgeID->getOutputData());
+                stats.module_times["ReadEdge"] += PerformanceTimer::Stop("ReadEdge");
+
+                PerformanceTimer::Start("ReadDST");
+                readDST->process(readEdge->getOutputData());
+                stats.module_times["ReadDST"] += PerformanceTimer::Stop("ReadDST");
+
+                PerformanceTimer::Start("ProcessEdge");
+                processEdge->process(readDST->getOutputData());
+                stats.module_times["ProcessEdge"] += PerformanceTimer::Stop("ProcessEdge");
+
+                PerformanceTimer::Start("Reduce");
+                reduce->process(processEdge->getOutputData());
+                stats.module_times["Reduce"] += PerformanceTimer::Stop("Reduce");
+
+                PerformanceTimer::Start("WriteDST");
+                writeDST->process(reduce->getOutputData());
+                stats.module_times["WriteDST"] += PerformanceTimer::Stop("WriteDST");
+
+                total_processed_edges = writeDST->getOutputData().total_processed_edges;
+
+
+                auto iter_end = PerformanceTimer::Clock::now();
+                stats.iteration_times.push_back(
+                    std::chrono::duration_cast<PerformanceTimer::Duration>(iter_end - iter_start).count()
+                );
+
+                total_edges += currentData.edgenum;
+    
+                for (size_t i = 0; i < VertexProperty.size(); ++i) {
+                    if (VertexProperty[i] != oldVertexProperty[i]) {  
+                        newActiveVertices.insert(i);
+                    }
+                }
             }
+    
+            activeVertices = std::move(newActiveVertices);
+            iterationCount++;
 
-            MessageQueue::Message msg = messageQueue.popMessage();
-            BaseModule* targetModule = static_cast<BaseModule*>(msg.targetModule);
-            GraphData inputData = msg.data;
 
-            std::cout << "Processing message at globalClock: " << globalClock 
-                  << ", targetModule: " << typeid(*targetModule).name() << std::endl;
-
-            targetModule->process(inputData);
-
-            targetModule->sendMessage(messageQueue, globalClock++, targetModule);
-
-            targetModule->advanceClock();
-
-            int maxLocalClock = 0;
-
-            for (const auto& module : modules) {
-                maxLocalClock = std::max(maxLocalClock, module->getLocalClock());
-            }
-
-            globalClock = maxLocalClock;
+            auto current_time = PerformanceTimer::Clock::now();
+            double elapsed_sec = std::chrono::duration<double>(current_time - start_time).count();
+            double teps = total_processed_edges / elapsed_sec;
+            std::cout << "Current TEPS: " << teps << "\n";
 
         }
+
+        auto total_time = std::accumulate(stats.iteration_times.begin(), stats.iteration_times.end(), 0L);
+        stats.edges_per_sec = (total_edges * 1e6) / total_time; 
+    
+        stats.PrintSummary();
     }
+    
+
+    //PR
+    /*void run() {
+        int iterationCount = 0;
+        const int N = 5;
+        const double d = 0.85;
+        const double threshold = 1e-6;
+    
+        std::unordered_set<int> activeVertices;
+        for (int i = 0; i < N; i++) activeVertices.insert(i);
+    
+        while (iterationCount < maxIterations && !activeVertices.empty()) {
+            std::unordered_map<int, double> global_contributions;
+
+            double hanging_contrib = 0.0;
+
+            for (int src : activeVertices) {
+                if (offset[src+1] - offset[src] == 0) { // 无出边
+                    hanging_contrib += VertexProperty[src];
+                }
+            }
+
+            double hanging_factor = d * hanging_contrib / N;
+    
+            for (int src : activeVertices) {
+                GraphData currentData;
+                currentData.srcid = src;
+                currentData.activeVertices = activeVertices;
+    
+                readActiveVertex->process(currentData);
+                readEdgeID->process(readActiveVertex->getOutputData());
+                readEdge->process(readEdgeID->getOutputData());
+                readDST->process(readEdge->getOutputData());
+                processEdge->process(readDST->getOutputData());
+                reduce->process(processEdge->getOutputData());
+    
+                for (const auto& [dst, contrib] : reduce->getOutputData().aggregated_contributions) {
+                    global_contributions[dst] += contrib;
+                }
+            }
+    
+            std::unordered_set<int> newActiveVertices;
+            for (int i = 0; i < N; i++) {
+                double old_pr = VertexProperty[i];
+                double sum_contrib = global_contributions[i] + hanging_factor;
+                double new_pr = (1-d)/N + d * sum_contrib;
+    
+                if (std::abs(new_pr - old_pr) > threshold) {
+                    newActiveVertices.insert(i);
+                }
+                VertexProperty[i] = new_pr;
+            }
+    
+            activeVertices.swap(newActiveVertices);
+            iterationCount++;
+    
+            std::cout << "Iteration " << iterationCount << " results:\n";
+            for (int i = 0; i < N; i++) {
+                std::cout << "Vertex " << i << ": " << VertexProperty[i] << "\n";
+            }
+        }
+    }*/
+    
+struct PerformanceStats {
+
+    std::vector<long> iteration_times; 
+    std::unordered_map<std::string, long> module_times;
+    
+
+    size_t peak_memory = 0;
+    
+
+    double edges_per_sec = 0.0;
+    
+    void PrintSummary() const {
+        std::cout << "\n====== Performance Report ======\n";
+        std::cout << "Total Iterations: " << iteration_times.size() << "\n";
+        std::cout << "Avg Iteration Time: " 
+                 << std::accumulate(iteration_times.begin(), iteration_times.end(), 0.0)/iteration_times.size() 
+                 << " μs\n";
+        //other
+    }
+};
+    
+    
 
     void printResults() {
     for (auto& module : modules) {
