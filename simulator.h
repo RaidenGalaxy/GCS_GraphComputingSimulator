@@ -21,6 +21,7 @@
 #include "Globaldata.h"
 
 #include "PerformanceTimer.h"
+#include "MemoryMonitor.h"
 //#include "mem.h"
 //#include "Config.h"
 //#include "def.h"
@@ -107,17 +108,26 @@ public:
     void run() {
 
         PerformanceStats stats;
-        size_t total_edges = 0;
+        size_t total_edges = 0;//TEPS
+
+        size_t peak_memory = 0;//MEM
 
         int iterationCount = 0;
         std::unordered_set<int> activeVertices = {0};
-        size_t total_processed_edges = 0;
+        size_t total_processed_edges = 0;//TEPS
 
-        auto start_time = PerformanceTimer::Clock::now();
+        auto start_time = PerformanceTimer::Clock::now();//TEPS
+
+        size_t total_comm_bytes = 0;//COMMUNICATE
+
+        std::vector<GraphData> module_outputs;//COMMUNICATE
     
         while (iterationCount < maxIterations && !activeVertices.empty()) {
 
-            auto iter_start = PerformanceTimer::Clock::now();
+            auto iter_start = PerformanceTimer::Clock::now();//TEPS
+            
+            size_t iter_comm = 0;//COMMUNICATE
+
 
             std::cout << "Iteration " << iterationCount 
                       << " started. Active vertices: " << activeVertices.size() << std::endl;
@@ -167,6 +177,15 @@ public:
                 );
 
                 total_edges += currentData.edgenum;
+
+
+                module_outputs.push_back(readActiveVertex->getOutputData());
+                module_outputs.push_back(readEdgeID->getOutputData());
+                module_outputs.push_back(readEdge->getOutputData());
+                module_outputs.push_back(readDST->getOutputData());
+                module_outputs.push_back(processEdge->getOutputData());
+                module_outputs.push_back(reduce->getOutputData());
+                module_outputs.push_back(writeDST->getOutputData());
     
                 for (size_t i = 0; i < VertexProperty.size(); ++i) {
                     if (VertexProperty[i] != oldVertexProperty[i]) {  
@@ -179,15 +198,29 @@ public:
             iterationCount++;
 
 
+            for (auto& data : module_outputs) {
+                iter_comm += data.CalculateSize();
+            }
+
+            stats.comm_mb_per_iter.push_back(iter_comm / (1024.0 * 1024.0));
+            total_comm_bytes += iter_comm;
+
             auto current_time = PerformanceTimer::Clock::now();
             double elapsed_sec = std::chrono::duration<double>(current_time - start_time).count();
             double teps = total_processed_edges / elapsed_sec;
             std::cout << "Current TEPS: " << teps << "\n";
 
+            size_t current_mem = MemoryMonitor::GetPeakMemory();
+            if (current_mem > stats.peak_memory) {
+                stats.peak_memory = current_mem;
+            }
+
         }
 
         auto total_time = std::accumulate(stats.iteration_times.begin(), stats.iteration_times.end(), 0L);
         stats.edges_per_sec = (total_edges * 1e6) / total_time; 
+
+        stats.total_comm_mb = total_comm_bytes / (1024.0 * 1024.0);
     
         stats.PrintSummary();
     }
@@ -259,6 +292,9 @@ struct PerformanceStats {
 
     std::vector<long> iteration_times; 
     std::unordered_map<std::string, long> module_times;
+
+    std::vector<double> comm_mb_per_iter; //comm per iter
+    double total_comm_mb = 0.0;           //total comm
     
 
     size_t peak_memory = 0;
@@ -273,6 +309,18 @@ struct PerformanceStats {
                  << std::accumulate(iteration_times.begin(), iteration_times.end(), 0.0)/iteration_times.size() 
                  << " μs\n";
         //other
+        std::cout << "\n====== Communication Metrics ======\n";
+        std::cout << "Avg Comm/Iter: " 
+                 << std::accumulate(comm_mb_per_iter.begin(), comm_mb_per_iter.end(), 0.0) 
+                    / comm_mb_per_iter.size()
+                 << " MB\n";
+        std::cout << "Total Comm: " << total_comm_mb << " MB\n";
+
+        long total_time = std::accumulate(iteration_times.begin(), iteration_times.end(), 0L);
+        for (const auto& [name, time] : module_times) {
+            double percent = (time * 100.0) / total_time;
+            std::cout << name << " Time: " << time << " μs (" << percent << "%)\n";
+        }
     }
 };
     

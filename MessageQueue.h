@@ -11,8 +11,9 @@
 struct GraphData {
     int srcid;
     //SSSP&SSWP
-    //int Uprop; 
-    double Uprop;
+    int Uprop;
+    //PR
+    //double Uprop;
     int edgenum;
 
     std::vector<int> dstid;
@@ -27,6 +28,19 @@ struct GraphData {
     std::unordered_set<int> activeVertices;
 
     size_t total_processed_edges = 0;
+
+    size_t CalculateSize() const {
+        size_t size = 0;
+        size += sizeof(srcid);
+        size += sizeof(Uprop);
+        size += sizeof(edgenum);
+        size += dstid.size() * sizeof(int);
+        size += weight.size() * sizeof(decltype(weight)::value_type);
+        size += Vprop.size() * sizeof(decltype(Vprop)::value_type);
+        size += Vtprop.size() * sizeof(decltype(Vtprop)::value_type);
+        size += res.size() * sizeof(decltype(res)::value_type);
+        return size;
+    }
 
     GraphData()
         : srcid(0), Uprop(0), edgenum(0),

@@ -18,9 +18,9 @@
 int main() {
 
 
-    std::string offset_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/ofs/ofs_1";
-    std::string edge_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/edges/edges_1";
-    std::string edgeweight_file = "/home/egalaxy/Desktop/simulator/test_src/graph_generate/weight/weight_1";
+    std::string offset_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/ofs/ofs_9";
+    std::string edge_file = "/home/egalaxy/Desktop/simulator/test_src/test_generate/edges/edges_9";
+    std::string edgeweight_file = "/home/egalaxy/Desktop/simulator/test_src/graph_generate/BFS_weight_5000e";
 
     Simulator simulator(offset_file, edge_file, edgeweight_file, "SSSP");
 
